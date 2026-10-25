@@ -18,7 +18,7 @@ function resize(){
   else if(q==='low')scale=1.6;
   else scale=w<600?1.9:2.2;
   Game.scale=scale;
-  Game.vw=w*scale;Game.vh=h*scale;
+  Game.vw=w/scale;Game.vh=h/scale;   // 渲染变换为 dpr*scale，逻辑视口=屏幕尺寸/scale
   if(ctx)ctx.setTransform(dpr,0,0,dpr,0,0);
 }
 

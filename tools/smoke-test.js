@@ -7,12 +7,14 @@ const root=path.join(__dirname,'..');
 // ---------- DOM 框架 ----------
 function makeCtx(){
   const g={addColorStop(){}};
+  const rec=name=>(...a)=>{if(window.__rec)window.__rec.push({name,a});};
   return new Proxy({},{
     get(t,k){
       if(k in t)return t[k];
       if(k==='createRadialGradient'||k==='createLinearGradient')return ()=>g;
       if(k==='measureText')return ()=>({width:10});
       if(k==='getImageData')return ()=>({data:new Uint8ClampedArray(4)});
+      if(k==='fillRect'||k==='clearRect'||k==='drawImage')return rec(k);
       return ()=>{};
     },
     set(t,k,v){t[k]=v;return true;}
@@ -112,6 +114,32 @@ setTimeout(()=>{
   try{
     G.Game.startRun();
     console.log('✓ 开局成功，伙伴:',G.game.player.name,'技能:',G.game.player.moves.map(m=>m.def.name).join('/'));
+
+    // 断言 1：逻辑视口必须等于 屏幕尺寸/scale（渲染变换为 dpr*scale）
+    const expScale=window.innerWidth>=600?2.2:1.9;
+    const evw=window.innerWidth/expScale,evh=window.innerHeight/expScale;
+    if(Math.abs(G.Game.vw-evw)>1e-6||Math.abs(G.Game.vh-evh)>1e-6){
+      console.error('视口异常',G.Game.vw,G.Game.vh,'期望',evw,evh);process.exit(1);
+    }
+    // 断言 2：玩家必须在可见区域内（相机中心）
+    const cam=G.Game.cam;
+    const sx=G.game.player.x-cam.x,sy=G.game.player.y-cam.y;
+    if(!(sx>0&&sx<cam.w&&sy>0&&sy<cam.h)){
+      console.error('玩家不在可见区域内',sx,sy,'cam.w',cam.w);process.exit(1);
+    }
+    console.log('✓ 视口/相机正确，玩家在屏幕内 ('+sx.toFixed(1)+','+sy.toFixed(1)+') 屏幕 '+evw.toFixed(0)+'×'+evh.toFixed(0));
+
+    // 断言 3：非 (0,0) 分块烘焙必须画在 256×256 画布内（同步块内执行，无定时器插入）
+    window.__rec=[];
+    const c=G.World.genChunk(-3,2);
+    c.dirty=true;c.img=null;
+    G.World.bake(c);
+    const rr=window.__rec.filter(o=>o.name==='fillRect');
+    window.__rec=null;
+    if(!rr.length){console.error('分块烘焙未绘制任何内容');process.exit(1);}
+    const bad=rr.filter(o=>o.a[0]<-0.01||o.a[1]<-0.01||o.a[0]+o.a[2]>258.01||o.a[1]+o.a[3]>258.01);
+    if(bad.length){console.error('分块越界绘制',bad.slice(0,3),'共',bad.length);process.exit(1);}
+    console.log('✓ 分块烘焙坐标正确 (chunk -3,2，'+rr.length+' 次 fillRect)');
   }catch(e){console.error('开局失败',e);process.exit(1);}
 
   // 手动驱动主循环（game.js 的 tick 通过 rAF 走 setTimeout，这里直接调 update）

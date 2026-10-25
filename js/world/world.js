@@ -120,9 +120,10 @@ W.hazardAt=function(x,y){
 };
 
 // ---------- 地块绘制 ----------
-function drawTile(ctx,tx,ty,t,s){
-  const px=tx*TS,py=ty*TS;
-  const h=(a,b)=>tileHash(tx+a,ty+b,s);
+// lx/ly: 分块内局部格坐标(0~15)  wx/wy: 世界绝对格坐标(用于噪声/动画)
+function drawTile(ctx,lx,ly,wx,wy,t,s){
+  const px=lx*TS,py=ly*TS;
+  const h=(a,b)=>tileHash(wx+a,wy+b,s);
   if(t===0||t===5){
     ctx.fillStyle='#3f8f3a';ctx.fillRect(px,py,TS,TS);
     ctx.fillStyle='#49a043';
@@ -156,7 +157,7 @@ function drawTile(ctx,tx,ty,t,s){
   }else if(t===4){
     ctx.fillStyle='#c83a10';ctx.fillRect(px,py,TS,TS);
     ctx.fillStyle='#ff7a2d';
-    const f=((Date.now()/240+tx*3+ty*5)|0)%TS;
+    const f=((Date.now()/240+wx*3+wy*5)|0)%TS;
     ctx.fillRect(px+2,py+((f+3)%TS),8,2);ctx.fillRect(px+((f+6)%TS),py+9,6,2);
     ctx.fillStyle='#ffd93d';ctx.fillRect(px+((h(14,0)*12)|0),py+((h(15,0)*12)|0),3,2);
   }else if(t===6){
@@ -165,8 +166,8 @@ function drawTile(ctx,tx,ty,t,s){
     ctx.fillStyle='#6a6a80';ctx.fillRect(px,py,TS,1);ctx.fillRect(px,py,1,TS);
   }
 }
-function drawObj(ctx,tx,ty,o,s){
-  const cx=tx*TS+TS/2,cy=ty*TS+TS;
+function drawObj(ctx,lx,ly,o,s){
+  const cx=lx*TS+TS/2,cy=ly*TS+TS;
   if(o===1)G.gfx.draw(ctx,'tree',cx,cy,{scale:1});
   else if(o===2)G.gfx.draw(ctx,'rock',cx,cy,{scale:1});
   else if(o===3)G.gfx.draw(ctx,'bush',cx,cy,{scale:1});
@@ -176,7 +177,6 @@ function drawObj(ctx,tx,ty,o,s){
   }
   else if(o===5)G.gfx.draw(ctx,'altar',cx,cy,{scale:1});
   else if(o===6){
-    const k=tx+'_'+ty;
     G.gfx.draw(ctx,'chest',cx,cy,{scale:1});
   }
   else if(o===7){
@@ -191,11 +191,11 @@ W.bake=function(c){
   const ctx=c.img.getContext('2d');
   ctx.clearRect(0,0,size,size);
   for(let ty=0;ty<CS;ty++)for(let tx=0;tx<CS;tx++){
-    drawTile(ctx,c.cx*CS+tx,c.cy*CS+ty,c.tiles[ty*CS+tx],W.seed);
+    drawTile(ctx,tx,ty,c.cx*CS+tx,c.cy*CS+ty,c.tiles[ty*CS+tx],W.seed);
   }
   for(let ty=0;ty<CS;ty++)for(let tx=0;tx<CS;tx++){
     const o=c.objs[ty*CS+tx];
-    if(o)drawObj(ctx,c.cx*CS+tx,c.cy*CS+ty,o,W.seed);
+    if(o)drawObj(ctx,tx,ty,o,W.seed);
   }
   c.dirty=false;
   return c.img;
