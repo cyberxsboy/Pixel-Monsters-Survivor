@@ -1,0 +1,30 @@
+name = "pixel-monsters-survivor"
+main = "worker.js"
+compatibility_date = "2025-01-01"
+
+# 静态资源目录 "." = 仓库根目录（index.html / css / js / favicon 等）
+# 若只想暴露游戏文件，可把 index.html、css/、js/、favicon.svg、manifest.webmanifest
+# 移入 assets/ 目录后改为 directory = "./assets"
+[assets]
+directory = "."
+binding = "ASSETS"
+not_found_handling = "404-page"
+
+# ---- 可选：KV 缓存（排行榜 / 云存档加速）----
+# wrangler kv namespace create SESSION
+# 然后取消下方注释并填入 id：
+# [[kv_namespaces]]
+# binding = "SESSION"
+# id = "<你的 KV 命名空间 ID>"
+
+# ---- D1 数据库（云存档 + 排行榜）----
+# wrangler d1 create pixel_monsters_survivor
+# wrangler d1 execute pixel_monsters_survivor --file=./schema.sql --remote
+# 然后取消下方注释并填入 database_id：
+# [[d1_databases]]
+# binding = "DB"
+# database_name = "pixel_monsters_survivor"
+# database_id = "<你的 D1 数据库 ID>"
+
+[observability]
+enabled = true

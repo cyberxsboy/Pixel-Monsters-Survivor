@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#0d1020">
+<title>精灵幸存者 · Pixel Monsters Survivor</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div id="app">
+  <canvas id="game"></canvas>
+
+  <!-- 战斗 HUD -->
+  <div id="hud" class="hidden">
+    <div id="hud-top">
+      <div id="hud-mon" class="panel">
+        <canvas id="hud-face" width="32" height="32"></canvas>
+        <div class="hud-mon-info">
+          <div id="hud-mon-name" class="hud-name">???</div>
+          <div class="bar hp"><div id="hud-hp-fill" class="fill"></div><span id="hud-hp-text">0/0</span></div>
+          <div class="bar xp"><div id="hud-xp-fill" class="fill"></div></div>
+        </div>
+        <div id="hud-lv" class="lv-badge">1</div>
+      </div>
+      <div id="hud-mid">
+        <div id="hud-time">00:00</div>
+        <div id="hud-wave">第 1 波</div>
+        <div id="hud-weather" class="hidden"></div>
+      </div>
+      <div id="hud-right">
+        <div class="chip" id="hud-kills" title="击杀">☠ 0</div>
+        <div class="chip" id="hud-gold" title="金币">● 0</div>
+        <button id="btn-mute" class="icon-btn" title="静音">♪</button>
+        <button id="btn-pause" class="icon-btn" title="暂停">❚❚</button>
+      </div>
+    </div>
+    <div id="hud-moves"></div>
+    <div id="hud-items"></div>
+    <div id="hud-boss" class="hidden"><div id="hud-boss-name">BOSS</div><div class="bar boss"><div id="hud-boss-fill" class="fill"></div></div></div>
+    <div id="hud-dash"><div id="hud-dash-fill"></div></div>
+  </div>
+
+  <!-- 提示 -->
+  <div id="toasts"></div>
+  <div id="big-banner" class="hidden"></div>
+
+  <!-- 虚拟摇杆 / 触屏按钮 -->
+  <div id="touch-ui" class="hidden">
+    <div id="joystick"><div id="joystick-knob"></div></div>
+    <button id="btn-dash" class="touch-btn">闪</button>
+  </div>
+
+  <!-- ============ 标题 ============ -->
+  <div id="screen-title" class="screen">
+    <div class="title-wrap">
+      <h1 class="game-title">精灵幸存者</h1>
+      <div class="game-sub">PIXEL MONSTERS SURVIVOR</div>
+      <div class="title-mon"><canvas id="title-mon" width="64" height="64"></canvas></div>
+      <div class="btn-col">
+        <button class="btn big" data-act="start">⚔ 开始冒险</button>
+        <button class="btn" data-act="collection">📖 精灵图鉴</button>
+        <button class="btn" data-act="help">❔ 操作说明</button>
+      </div>
+      <div id="title-cloud" class="cloud-status">离线模式</div>
+      <div class="credit-line">原创像素同人 · 基于幸存者类玩法 · 可部署至 Cloudflare</div>
+    </div>
+  </div>
+
+  <!-- ============ 主菜单 ============ -->
+  <div id="screen-menu" class="screen hidden">
+    <div class="menu-head">
+      <div class="menu-profile">
+        <canvas id="menu-face" width="40" height="40"></canvas>
+        <div>
+          <div id="menu-mon-name" class="hud-name">选择伙伴</div>
+          <div class="menu-currencies">
+            <span class="chip" id="menu-gold">● 0</span>
+            <span class="chip gem" id="menu-gem">◆ 0</span>
+            <span class="chip tick" id="menu-tick">✦ 0</span>
+          </div>
+        </div>
+      </div>
+      <button class="icon-btn" data-act="settings" title="设置">⚙</button>
+    </div>
+    <div class="menu-grid">
+      <button class="btn big primary" data-act="start">⚔ 开始冒险</button>
+      <button class="btn" data-act="partner">🐾 更换伙伴</button>
+      <button class="btn" data-act="gacha">🎰 扭蛋召唤</button>
+      <button class="btn" data-act="upgrades">⬆ 永久强化</button>
+      <button class="btn" data-act="collection">📖 精灵图鉴</button>
+      <button class="btn" data-act="missions">📋 每日任务</button>
+      <button class="btn" data-act="rank">🏆 生存排行</button>
+      <button class="btn" data-act="help">❔ 操作说明</button>
+    </div>
+    <div id="menu-best" class="menu-best"></div>
+  </div>
+
+  <!-- ============ 选择伙伴 ============ -->
+  <div id="screen-partner" class="screen hidden">
+    <div class="screen-head"><button class="icon-btn back" data-act="menu">←</button><h2>选择伙伴</h2></div>
+    <div id="partner-list" class="card-grid"></div>
+  </div>
+
+  <!-- ============ 图鉴 ============ -->
+  <div id="screen-collection" class="screen hidden">
+    <div class="screen-head"><button class="icon-btn back" data-act="menu">←</button><h2>精灵图鉴 <span id="dex-count"></span></h2></div>
+    <div id="dex-filter" class="chip-row"></div>
+    <div id="dex-grid" class="card-grid dex"></div>
+    <div id="dex-detail" class="detail-panel hidden"></div>
+  </div>
+
+  <!-- ============ 扭蛋 ============ -->
+  <div id="screen-gacha" class="screen hidden">
+    <div class="screen-head"><button class="icon-btn back" data-act="menu">←</button><h2>扭蛋召唤</h2></div>
+    <div class="gacha-stage">
+      <canvas id="gacha-machine" width="180" height="200"></canvas>
+      <div id="gacha-result" class="gacha-result"></div>
+    </div>
+    <div class="gacha-info">
+      <div>持有扭蛋券：<span id="gacha-tickets" class="chip tick">✦ 0</span></div>
+      <div class="btn-row">
+        <button class="btn" id="gacha-x1">召唤 1 次 (1 券)</button>
+        <button class="btn primary" id="gacha-x10">召唤 10 次 (9 券)</button>
+      </div>
+      <div class="hint">重复获得的精灵会转化为◆钻石与强化碎片。闪光概率 1/64。</div>
+    </div>
+  </div>
+
+  <!-- ============ 永久强化 ============ -->
+  <div id="screen-upgrades" class="screen hidden">
+    <div class="screen-head"><button class="icon-btn back" data-act="menu">←</button><h2>永久强化 <span id="up-gem" class="chip gem">◆ 0</span></h2></div>
+    <div id="upgrade-list" class="up-list"></div>
+  </div>
+
+  <!-- ============ 任务 ============ -->
+  <div id="screen-missions" class="screen hidden">
+    <div class="screen-head"><button class="icon-btn back" data-act="menu">←</button><h2>每日任务</h2></div>
+    <div id="mission-list" class="up-list"></div>
+    <h3 class="sub-title">成就</h3>
+    <div id="achieve-list" class="up-list"></div>
+  </div>
+
+  <!-- ============ 排行 ============ -->
+  <div id="screen-rank" class="screen hidden">
+    <div class="screen-head"><button class="icon-btn back" data-act="menu">←</button><h2>生存排行</h2></div>
+    <div id="rank-tabs" class="chip-row"></div>
+    <div id="rank-list" class="rank-list"></div>
+  </div>
+
+  <!-- ============ 设置 ============ -->
+  <div id="screen-settings" class="screen hidden">
+    <div class="screen-head"><button class="icon-btn back" data-act="menu">←</button><h2>设置</h2></div>
+    <div class="setting-list">
+      <label class="setting-row"><span>音量</span><input type="range" id="set-volume" min="0" max="100" value="70"></label>
+      <label class="setting-row"><span>背景音乐</span><input type="checkbox" id="set-music" checked></label>
+      <label class="setting-row"><span>伤害数字</span><input type="checkbox" id="set-dmgnum" checked></label>
+      <label class="setting-row"><span>屏幕震动</span><input type="checkbox" id="set-shake" checked></label>
+      <label class="setting-row"><span>画质 (自动)</span><select id="set-quality"><option value="auto">自动</option><option value="high">高</option><option value="low">低</option></select></label>
+      <label class="setting-row"><span>玩家昵称</span><input type="text" id="set-nick" maxlength="12" placeholder="幸存者"></label>
+      <label class="setting-row"><span>云存档</span><button class="btn small" id="set-cloud">同步</button></label>
+      <div class="setting-row"><span>存档管理</span><div class="btn-row">
+        <button class="btn small" id="set-export">导出</button>
+        <button class="btn small" id="set-import">导入</button>
+        <button class="btn small danger" id="set-reset">重置</button>
+      </div></div>
+      <textarea id="set-io" class="io-box hidden" spellcheck="false"></textarea>
+    </div>
+  </div>
+
+  <!-- ============ 说明 ============ -->
+  <div id="screen-help" class="screen hidden">
+    <div class="screen-head"><button class="icon-btn back" data-act="menu">←</button><h2>操作说明</h2></div>
+    <div class="help-body">
+      <h3>基本操作</h3>
+      <table class="key-table">
+        <tr><td><kbd>W A S D</kbd> / 方向键</td><td>移动</td></tr>
+        <tr><td><kbd>Shift</kbd> / <kbd>空格</kbd></td><td>冲刺（短暂无敌）</td></tr>
+        <tr><td><kbd>1</kbd>~<kbd>4</kbd></td><td>切换主动技能</td></tr>
+        <tr><td><kbd>Q</kbd> / <kbd>E</kbd></td><td>循环切换技能</td></tr>
+        <tr><td><kbd>Esc</kbd> / <kbd>P</kbd></td><td>暂停</td></tr>
+        <tr><td>触屏</td><td>左侧拖动摇杆移动，右下按钮冲刺</td></tr>
+      </table>
+      <h3>玩法要点</h3>
+      <ul>
+        <li>精灵会自动使用当前选中的技能攻击，拾取<span class="c-xp">经验宝石</span>升级。</li>
+        <li>升级时从三个强化中选一个；技能满级后满足条件可触发<b>武器进化</b>。</li>
+        <li>等级达到阈值时精灵会<b>进化</b>，外观与属性大幅提升。</li>
+        <li>属性存在克制关系（如水克火），战斗中留意属性提示。</li>
+        <li>地图上有<span class="c-heal">回复泉</span>、宝箱、石碑与可破坏物；水面减速，熔岩会灼烧所有单位。</li>
+        <li>定时出现<b>裂隙</b>：进入可挑战传说精灵，胜利获得大量奖励。</li>
+        <li>每 2 分钟出现一次<b>头目</b>，击败后继续无尽生存，坚持 15 分钟达成通关。</li>
+        <li>局内金币与钻石可用于扭蛋与永久强化，越强越容易走得更远。</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- ============ 升级三选一 ============ -->
+  <div id="screen-levelup" class="screen overlay hidden">
+    <div class="lv-panel">
+      <h2>升级！选择一项强化</h2>
+      <div id="levelup-cards" class="choice-cards"></div>
+    </div>
+  </div>
+
+  <!-- ============ 祝福（Boss 后） ============ -->
+  <div id="screen-bless" class="screen overlay hidden">
+    <div class="lv-panel">
+      <h2>头目已被击败</h2>
+      <p class="bless-tip">选择一份祝福</p>
+      <div id="bless-cards" class="choice-cards"></div>
+    </div>
+  </div>
+
+  <!-- ============ 暂停 ============ -->
+  <div id="screen-pause" class="screen overlay hidden">
+    <div class="pause-panel">
+      <h2>已暂停</h2>
+      <div id="pause-stats" class="pause-stats"></div>
+      <div class="btn-col">
+        <button class="btn primary" data-act="resume">继续</button>
+        <button class="btn" data-act="settings-pause">设置</button>
+        <button class="btn danger" data-act="quit">结束本局</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ 结算 ============ -->
+  <div id="screen-result" class="screen overlay hidden">
+    <div class="result-panel">
+      <h2 id="result-title">冒险结束</h2>
+      <div id="result-mon" class="result-mon"><canvas id="result-face" width="64" height="64"></canvas></div>
+      <div id="result-stats" class="result-stats"></div>
+      <div id="result-reward" class="result-reward"></div>
+      <div class="btn-col">
+        <button class="btn primary" data-act="retry">再来一次</button>
+        <button class="btn" data-act="menu">返回菜单</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="evolve-flash" class="hidden"></div>
+</div>
+
+<input type="file" id="import-file" accept="application/json" class="hidden">
+
+<script src="js/core/util.js"></script>
+<script src="js/core/rng.js"></script>
+<script src="js/core/input.js"></script>
+<script src="js/core/audio.js"></script>
+<script src="js/core/save.js"></script>
+<script src="js/core/gfx.js"></script>
+<script src="js/data/types.js"></script>
+<script src="js/data/sprites.js"></script>
+<script src="js/data/monsters.js"></script>
+<script src="js/data/moves.js"></script>
+<script src="js/data/enemies.js"></script>
+<script src="js/data/upgrades.js"></script>
+<script src="js/world/world.js"></script>
+<script src="js/entities/fx.js"></script>
+<script src="js/entities/projectile.js"></script>
+<script src="js/entities/pickup.js"></script>
+<script src="js/entities/player.js"></script>
+<script src="js/entities/enemy.js"></script>
+<script src="js/systems/combat.js"></script>
+<script src="js/systems/spawner.js"></script>
+<script src="js/systems/levelup.js"></script>
+<script src="js/systems/boss.js"></script>
+<script src="js/systems/gacha.js"></script>
+<script src="js/ui/ui.js"></script>
+<script src="js/ui/hud.js"></script>
+<script src="js/ui/menu.js"></script>
+<script src="js/game.js"></script>
+</body>
+</html>

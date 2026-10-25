@@ -1,0 +1,13 @@
+{
+  "name": "精灵幸存者",
+  "short_name": "精灵幸存者",
+  "description": "像素风幸存者类小游戏",
+  "start_url": "./index.html",
+  "display": "fullscreen",
+  "orientation": "landscape",
+  "background_color": "#0b0e1a",
+  "theme_color": "#0d1020",
+  "icons": [
+    { "src": "favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}
