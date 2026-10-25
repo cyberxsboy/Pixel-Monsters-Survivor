@@ -175,16 +175,22 @@ function checkPause(){
 }
 
 // ---------- 主循环 ----------
+const seenErr=Object.create(null);
+function reportErr(where,e){
+  const k=where+':'+(e&&e.message||e);
+  if(seenErr[k])return;seenErr[k]=1;
+  console.error('[game] '+where+' 异常（同类仅报告一次）:',e);
+}
 function tick(now){
   requestAnimationFrame(tick);
   const dt=Math.min(0.1,(now-last)/1000||0);
   last=now;
   checkPause();
   if(Game.state==='playing'&&running){
-    update(dt);
+    try{update(dt);}catch(e){reportErr('update',e);}
   }
   if(Game.state==='playing'||Game.state==='pause'||Game.state==='result'){
-    render();
+    try{render();}catch(e){reportErr('render',e);}
   }
 }
 

@@ -2,11 +2,13 @@
 'use strict';
 const G=window.G,U=G.U;
 const pool=[];
+let uid=1;
 const P=G.Projectiles=[];
 G.Projectiles.reset=function(){while(P.length)pool.push(P.pop());};
 
 G.Projectiles.spawn=function(o){
   const p=pool.pop()||{};
+  p.uid=uid++;
   p.x=o.x;p.y=o.y;p.vx=o.vx||0;p.vy=o.vy||0;
   p.dmg=o.dmg||10;p.team=o.team||'player';
   p.size=o.size||4;p.life=o.life||1.6;p.r=p.size;

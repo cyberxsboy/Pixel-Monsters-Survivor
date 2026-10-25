@@ -123,6 +123,7 @@ G.Achievements={
 
 // ---------- 云存档 ----------
 S.api=async function(path,body){
+  if(location.protocol==='file:'){throw new Error('file:// 离线模式，跳过云请求');}
   const opt=body?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}:{method:'GET'};
   const r=await fetch(path,opt);
   if(!r.ok)throw new Error('HTTP '+r.status);

@@ -140,6 +140,28 @@ setTimeout(()=>{
     const bad=rr.filter(o=>o.a[0]<-0.01||o.a[1]<-0.01||o.a[0]+o.a[2]>258.01||o.a[1]+o.a[3]>258.01);
     if(bad.length){console.error('分块越界绘制',bad.slice(0,3),'共',bad.length);process.exit(1);}
     console.log('✓ 分块烘焙坐标正确 (chunk -3,2，'+rr.length+' 次 fillRect)');
+
+    // 断言 4：环绕技能弹体被对象池回收后必须自愈（历史 bug：castOrbit 每帧抛异常 → 画面冻结）
+    try{
+      const mdef=Object.values(G.MOVES).find(d=>d.kind==='orbit');
+      if(!mdef)throw new Error('找不到 orbit 技能定义');
+      const mp=G.game.player;
+      const m={id:mdef.id,def:mdef,lv:1,cd:0,ang:0,evolved:false,evo:null};
+      mp.moves.push(m);mp.active=mp.moves.length-1;
+      G.Player.update(0.016);
+      if(!m.orbs||!m.orbs.length)throw new Error('轨道弹未生成');
+      const P=G.Projectiles;
+      for(const o of m.orbs)if(o.p)o.p.dead=true;
+      P.update(0.016);                    // 死亡 → 回收进对象池
+      P.spawn({x:0,y:0,life:1,dmg:1});    // 复用对象（orbit 被重置为 null）
+      m.cd=0;
+      G.Player.update(0.016);             // 必须自愈，不得抛异常
+      for(const o of m.orbs){
+        if(!o.p||!o.p.orbit)throw new Error('轨道引用未修复');
+        if(o.p.uid!==o.uid)throw new Error('uid 未同步');
+      }
+      console.log('✓ 环绕技能对象池回收自愈正常 ('+m.orbs.length+' orbs)');
+    }catch(e){console.error('环绕技能回归失败',e);process.exit(1);}
   }catch(e){console.error('开局失败',e);process.exit(1);}
 
   // 手动驱动主循环（game.js 的 tick 通过 rAF 走 setTimeout，这里直接调 update）

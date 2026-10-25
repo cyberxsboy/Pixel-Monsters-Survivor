@@ -249,20 +249,24 @@ function castAttack(p,m,lv){
   }
 }
 function castOrbit(p,m,lv){
-  const gs=G.game;
   if(!m.orbs){m.orbs=[];m.ang=Math.random()*U.TAU;}
   const n=(lv.n||2)+(m.evo?(m.evo.nAdd||0):0);
   const r=(lv.r||44)+(m.evo?(m.evo.rAdd||0):0);
   const rot=(lv.rot||2.4);
+  const spawnOrb=()=>G.Projectiles.spawn({x:p.x,y:p.y,team:'player',dmg:lv.dmg||10,size:lv.size||6,
+    type:m.def.type,color:typeColor(m.def.type),life:9999,pierce:Infinity,
+    orbit:{r:r,ang:0,spd:rot,cx:p.x,cy:p.y}});
   // 重建轨道弹（伤害实时更新）
   while(m.orbs.length>n){const idx=m.orbs.pop();if(idx.p)idx.p.dead=true;}
-  while(m.orbs.length<n){
-    const pr=G.Projectiles.spawn({x:p.x,y:p.y,team:'player',dmg:lv.dmg||10,size:lv.size||6,
-      type:m.def.type,color:typeColor(m.def.type),life:9999,orbit:{r:r,ang:0,spd:rot,cx:p.x,cy:p.y}});
-    m.orbs.push({p:pr});
-  }
+  while(m.orbs.length<n){const pr=spawnOrb();m.orbs.push({p:pr,uid:pr.uid});}
+  const dmg=Math.round((lv.dmg||10)*p.baseDmg*p.dmgMul);
   for(const o of m.orbs){
-    if(o.p){o.p.dmg=Math.round((lv.dmg||10)*p.baseDmg*p.dmgMul);o.p.orbit.r=r;o.p.orbit.spd=rot;o.p.size=lv.size||6;}
+    // 弹体可能已被对象池回收复用（换局/异常），校验 uid，失效则重新生成
+    if(!o.p||!o.p.orbit||o.p.uid!==o.uid||G.Projectiles.indexOf(o.p)<0){
+      o.p=spawnOrb();o.uid=o.p.uid;
+    }
+    o.p.dmg=dmg;o.p.size=lv.size||6;o.p.r=o.p.size;
+    o.p.orbit.r=r;o.p.orbit.spd=rot;
   }
 }
 function castShield(p,m,lv){
