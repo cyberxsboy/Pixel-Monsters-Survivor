@@ -13,7 +13,7 @@ M.refresh=function(){
   const cv=U.el('menu-face');
   const sheet=sp?G.gfx.sheet(sp.sprite,s.shiny):null;
   if(sheet){const c=cv.getContext('2d');c.clearRect(0,0,40,40);c.imageSmoothingEnabled=false;
-    c.drawImage(sheet,0,0,40,40);}
+    G.gfx.fit(c,sheet,40,40);}
   const best=s.stats.bestMs;
   U.el('menu-best').textContent=best?('历史最佳：'+U.fmtTime(best)+' · '+
     (G.SPECIES[s.stats.bestMon]?G.SPECIES[s.stats.bestMon].name:'')+' · 总击杀 '+U.fmtNum(s.stats.kills)):

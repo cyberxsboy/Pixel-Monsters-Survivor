@@ -102,7 +102,7 @@ UI.renderCollection=function(filter){
     card.className='card'+(col?'':' locked')+(col&&col.sh>0?' shiny':'');
     const cv=document.createElement('canvas');cv.width=16;cv.height=16;
     const sheet=G.gfx.sheet(sp.sprite,col&&col.sh>0);
-    if(sheet){const c2=cv.getContext('2d');c2.imageSmoothingEnabled=false;c2.drawImage(sheet,0,0);}
+    if(sheet){const c2=cv.getContext('2d');G.gfx.fit(c2,sheet,cv.width||16,cv.height||16);}
     card.appendChild(cv);
     const nm=document.createElement('div');nm.className='nm';nm.textContent=col?sp.name:'？？？';card.appendChild(nm);
     const ty=document.createElement('div');ty.className='ty';
@@ -137,7 +137,7 @@ function showDexDetail(id){
     (sp.evo?'<div class="mission-prog">进化 → '+U.esc(G.mon(sp.evo.into).name)+'（Lv.'+sp.evo.lv+'）</div>':'');
   const cv=U.el('dex-cv');
   const sheet=G.gfx.sheet(sp.sprite,col&&col.sh>0);
-  if(sheet){const c2=cv.getContext('2d');c2.imageSmoothingEnabled=false;c2.drawImage(sheet,0,0);}
+  if(sheet){const c2=cv.getContext('2d');G.gfx.fit(c2,sheet,cv.width||16,cv.height||16);}
   U.el('dex-close').onclick=()=>box.classList.add('hidden');
 }
 function statRow(k,v,max){
@@ -161,7 +161,7 @@ UI.renderPartners=function(cb){
     card.className='card'+(s.mon===id?' sel':'')+(col.sh>0?' shiny':'');
     const cv=document.createElement('canvas');cv.width=16;cv.height=16;
     const sheet=G.gfx.sheet(sp.sprite,s.mon===id&&s.shiny&&col.sh>0);
-    if(sheet){const c2=cv.getContext('2d');c2.imageSmoothingEnabled=false;c2.drawImage(sheet,0,0);}
+    if(sheet){const c2=cv.getContext('2d');G.gfx.fit(c2,sheet,cv.width||16,cv.height||16);}
     card.appendChild(cv);
     const nm=document.createElement('div');nm.className='nm';nm.textContent=sp.name;card.appendChild(nm);
     const ty=document.createElement('div');ty.className='ty';ty.textContent=sp.types.join('/');card.appendChild(ty);
@@ -210,7 +210,7 @@ UI.gachaResult=function(res){
     card.style.animationDelay=(i*0.08)+'s';
     const cv=document.createElement('canvas');cv.width=16;cv.height=16;
     const sheet=G.gfx.sheet(sp.sprite,r.shiny);
-    if(sheet){const c2=cv.getContext('2d');c2.imageSmoothingEnabled=false;c2.drawImage(sheet,0,0);}
+    if(sheet){const c2=cv.getContext('2d');G.gfx.fit(c2,sheet,cv.width||16,cv.height||16);}
     card.appendChild(cv);
     const nm=document.createElement('div');nm.className='nm';nm.textContent=sp.name;card.appendChild(nm);
     const rar=document.createElement('div');rar.className='rar';

@@ -109,6 +109,15 @@ Gfx.shadow=function(ctx,x,y,rx,alpha){
   ctx.restore();
 };
 
+// 等比缩放置入 w×h 盒子（居中，不裁剪不拉伸；UI 用）
+Gfx.fit=function(ctx,sheet,w,h){
+  if(!sheet)return;
+  const s=Math.min(w/sheet.width,h/sheet.height);
+  const dw=Math.max(1,Math.round(sheet.width*s)),dh=Math.max(1,Math.round(sheet.height*s));
+  ctx.imageSmoothingEnabled=false;
+  ctx.drawImage(sheet,Math.round((w-dw)/2),Math.round((h-dh)/2),dw,dh);
+};
+
 // 像素矩形（整数像素对齐）
 Gfx.rect=function(ctx,x,y,w,h,col){
   ctx.fillStyle=col;ctx.fillRect(Math.round(x),Math.round(y),Math.round(w),Math.round(h));

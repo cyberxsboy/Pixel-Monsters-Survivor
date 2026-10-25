@@ -1,109 +1,13 @@
-// 冒烟测试：在 Node 中模拟浏览器环境，加载全部脚本并模拟 12 秒战斗
+﻿// 冒烟测试：在 Node 中模拟浏览器环境，加载全部脚本并模拟战斗
 // 用法：node tools/smoke-test.js
 'use strict';
-const fs=require('fs'),path=require('path'),vm=require('vm');
+const path=require('path');
+const createEnv=require('./env');
 const root=path.join(__dirname,'..');
 
-// ---------- DOM 框架 ----------
-function makeCtx(){
-  const g={addColorStop(){}};
-  const rec=name=>(...a)=>{if(window.__rec)window.__rec.push({name,a});};
-  return new Proxy({},{
-    get(t,k){
-      if(k in t)return t[k];
-      if(k==='createRadialGradient'||k==='createLinearGradient')return ()=>g;
-      if(k==='measureText')return ()=>({width:10});
-      if(k==='getImageData')return ()=>({data:new Uint8ClampedArray(4)});
-      if(k==='fillRect'||k==='clearRect'||k==='drawImage')return rec(k);
-      return ()=>{};
-    },
-    set(t,k,v){t[k]=v;return true;}
-  });
-}
-function makeEl(tag){
-  const el={
-    tagName:(tag||'div').toUpperCase(),
-    style:{cssText:''},
-    children:[],
-    firstChild:null,
-    width:16,height:16,
-    _cls:new Set(),
-    className:'',
-    textContent:'',
-    innerHTML:'',
-    value:'',checked:false,disabled:false,files:[],
-    offsetWidth:100,
-    classList:{
-      add(c){el._cls.add(c);},remove(c){el._cls.delete(c);},
-      toggle(c,f){if(f===undefined)f=!el._cls.has(c);f?el._cls.add(c):el._cls.delete(c);return f;},
-      contains(c){return el._cls.has(c);}
-    },
-    appendChild(c){el.children.push(c);el.firstChild=el.children[0];c.parentNode=el;return c;},
-    removeChild(c){const i=el.children.indexOf(c);if(i>=0)el.children.splice(i,1);return c;},
-    remove(){if(el.parentNode)el.parentNode.removeChild(el);},
-    addEventListener(){},removeEventListener(){},
-    querySelector(){return makeEl('div');},
-    querySelectorAll(){return [];},
-    getContext(){return el._ctx||(el._ctx=makeCtx());},
-    getBoundingClientRect(){return {left:0,top:0,width:120,height:120,right:120,bottom:120};},
-    focus(){},select(){},click(){},
-    setAttribute(){},getAttribute(){return null;},
-    closest(){return null;}
-  };
-  return el;
-}
-const elCache=Object.create(null);
-const document={
-  readyState:'complete',
-  getElementById(id){return elCache[id]||(elCache[id]=makeEl('div'));},
-  createElement(tag){return makeEl(tag);},
-  querySelector(){return makeEl('div');},
-  querySelectorAll(){return [];},
-  addEventListener(){},removeEventListener(){},
-  body:makeEl('body'),
-  elementFromPoint(){return null;}
-};
-const listeners={};
-const window={
-  document,
-  addEventListener(ev,fn){(listeners[ev]=listeners[ev]||[]).push(fn);},
-  removeEventListener(){},
-  innerWidth:960,innerHeight:540,devicePixelRatio:1,
-  performance:{now:()=>Date.now()},
-  requestAnimationFrame(fn){return setTimeout(()=>fn(Date.now()),16);},
-  cancelAnimationFrame(){},
-  AudioContext:null,webkitAudioContext:null,
-  localStorage:{_d:{},getItem(k){return this._d[k]||null;},setItem(k,v){this._d[k]=v;},removeItem(k){delete this._d[k];}},
-  navigator:{maxTouchPoints:0,userAgent:'node'},
-  location:{href:'http://localhost/',search:''},
-  confirm(){return false;},
-  fetch(){return Promise.reject(new Error('offline'));},
-  setTimeout,clearTimeout,setInterval,clearInterval,console,Date,Math,JSON,Object,Array,String,Number,Boolean,Error,Promise,Proxy,Reflect,Uint8Array,Uint8ClampedArray,Map,Set,isNaN,parseInt,parseFloat,encodeURIComponent,decodeURIComponent
-};
-window.window=window;window.self=window;
-const ctxObj=vm.createContext(Object.assign(window,{
-  document,console,window,self:window,globalThis:window,
-  performance:window.performance,localStorage:window.localStorage,
-  navigator:window.navigator,location:window.location,
-  requestAnimationFrame:window.requestAnimationFrame,
-  setTimeout,clearTimeout,setInterval,clearInterval,
-  fetch:window.fetch,confirm:window.confirm
-}));
-
-// ---------- 加载脚本 ----------
-const order=[
-  'js/core/util.js','js/core/rng.js','js/core/input.js','js/core/audio.js','js/core/save.js','js/core/gfx.js',
-  'js/data/types.js','js/data/sprites.js','js/data/monsters.js','js/data/moves.js','js/data/enemies.js','js/data/upgrades.js',
-  'js/world/world.js','js/entities/fx.js','js/entities/projectile.js','js/entities/pickup.js',
-  'js/entities/player.js','js/entities/enemy.js',
-  'js/systems/combat.js','js/systems/spawner.js','js/systems/levelup.js','js/systems/boss.js','js/systems/gacha.js',
-  'js/ui/ui.js','js/ui/hud.js','js/ui/menu.js','js/game.js'
-];
-for(const f of order){
-  const code=fs.readFileSync(path.join(root,f),'utf8');
-  try{vm.runInContext(code,ctxObj,{filename:f});}
-  catch(e){console.error('加载失败',f,e);process.exit(1);}
-}
+const {ctxObj,window,document,elCache}=createEnv();
+try{createEnv.loadScripts(ctxObj,root);}
+catch(e){console.error('加载失败',e);process.exit(1);}
 console.log('✓ 全部脚本加载成功');
 
 const G=ctxObj.G;
@@ -130,15 +34,19 @@ setTimeout(()=>{
     console.log('✓ 视口/相机正确，玩家在屏幕内 ('+sx.toFixed(1)+','+sy.toFixed(1)+') 屏幕 '+evw.toFixed(0)+'×'+evh.toFixed(0));
 
     // 断言 3：非 (0,0) 分块烘焙必须画在 256×256 画布内（同步块内执行，无定时器插入）
-    window.__rec=[];
+    createEnv.setRec([]);
     const c=G.World.genChunk(-3,2);
     c.dirty=true;c.img=null;
     G.World.bake(c);
-    const rr=window.__rec.filter(o=>o.name==='fillRect');
-    window.__rec=null;
+    const rr=(createEnv.recSink()||[]).filter(o=>o.name==='fillRect');
+    createEnv.setRec(null);
     if(!rr.length){console.error('分块烘焙未绘制任何内容');process.exit(1);}
     const bad=rr.filter(o=>o.a[0]<-0.01||o.a[1]<-0.01||o.a[0]+o.a[2]>258.01||o.a[1]+o.a[3]>258.01);
-    if(bad.length){console.error('分块越界绘制',bad.slice(0,3),'共',bad.length);process.exit(1);}
+    if(bad.length){
+      console.error('分块越界绘制',bad.slice(0,3),'共',bad.length);
+      console.error('首个越界调用栈:\n'+bad[0].stack);
+      process.exit(1);
+    }
     console.log('✓ 分块烘焙坐标正确 (chunk -3,2，'+rr.length+' 次 fillRect)');
 
     // 断言 4：环绕技能弹体被对象池回收后必须自愈（历史 bug：castOrbit 每帧抛异常 → 画面冻结）
@@ -162,15 +70,60 @@ setTimeout(()=>{
       }
       console.log('✓ 环绕技能对象池回收自愈正常 ('+m.orbs.length+' orbs)');
     }catch(e){console.error('环绕技能回归失败',e);process.exit(1);}
+
+    // 断言 5：冲刺必须走碰撞（历史 bug：冲刺直接改坐标穿进湖心 → 四面锁死 = 方向键失灵）
+    try{
+      const pl=G.game.player;
+      pl.dead=false;if(pl.hp<=0)pl.hp=pl.hpMax;
+      for(const k of ['up','down','left','right'])G.Input.keys[k]=false;
+      pl.dashT=0;pl.dashCd=0;
+      const sx=Math.floor(pl.x/16)*16,sy=Math.floor(pl.y/16)*16;
+      let cor=null;
+      outer:for(let gy=-24;gy<=24;gy++)for(let gx=-24;gx<=24;gx++){
+        const bx=sx+gx*16,by=sy+gy*16;
+        for(let k=0;k<4;k++){
+          const t=G.World.tileAt(bx+k*16,by);
+          if(t===2||t===4||G.World.objAt(bx+k*16,by)!==0)continue outer;
+        }
+        cor={x:bx+8,y:by+8};
+      }
+      if(!cor)throw new Error('找不到干燥走廊');
+      pl.x=cor.x;pl.y=cor.y;
+      G.World.setObj(cor.x+16,cor.y,1);
+      pl.dashT=0.5;pl.dashVX=430;pl.dashVY=0;
+      for(let k=0;k<40;k++)G.Player.update(1/60);
+      if(G.World.hitSolid(pl.x,pl.y,pl.r*0.72))throw new Error('冲刺后卡进固体 ('+pl.x.toFixed(1)+','+pl.y.toFixed(1)+')');
+      if(pl.x>cor.x+14)throw new Error('冲刺穿墙 x='+pl.x.toFixed(1)+' > '+(cor.x+14));
+      pl.x=cor.x+16;pl.y=cor.y;
+      if(!G.World.hitSolid(pl.x,pl.y,pl.r*0.72))throw new Error('测试布置失败：目标点不是固体');
+      G.Player.update(1/60);
+      if(G.World.hitSolid(pl.x,pl.y,pl.r*0.72))throw new Error('unstick 脱困失败');
+      console.log('✓ 冲刺碰撞 + unstick 脱困正常 (最终 x='+pl.x.toFixed(1)+')');
+    }catch(e){console.error('冲刺/脱困回归失败',e);process.exit(1);}
+
+    // 断言 6：出生点搜索（历史 bug：种子随机 → (0,0) 可能是大片岩浆湖 → 开局即锁死）
+    try{
+      const blocked=[];
+      for(let gx=-3;gx<=3;gx++)for(let gy=-3;gy<=3;gy++){
+        const ox=gx*16+8,oy=gy*16+8;
+        blocked.push([ox,oy]);
+        G.World.setObj(ox,oy,1);
+      }
+      const p2=G.Player.reset('flame1',false);
+      if(G.World.hitSolid(p2.x,p2.y,p2.r*0.72))throw new Error('出生点仍在固体里 ('+p2.x.toFixed(1)+','+p2.y.toFixed(1)+')');
+      const d2=Math.hypot(p2.x,p2.y);
+      if(d2>5*16*1.5+8)throw new Error('出生点搜索跑太远 d='+d2.toFixed(1));
+      for(const[ox,oy]of blocked)G.World.setObj(ox,oy,0);
+      console.log('✓ 出生点搜索正常 (0,0) 被封时出生于 ('+p2.x.toFixed(0)+','+p2.y.toFixed(0)+')');
+    }catch(e){console.error('出生点回归失败',e);process.exit(1);}
   }catch(e){console.error('开局失败',e);process.exit(1);}
 
-  // 手动驱动主循环（game.js 的 tick 通过 rAF 走 setTimeout，这里直接调 update）
+  // 手动驱动主循环（game.js 的 tick 通过 rAF 走 setTimeout）
   let frames=0,errs=0;
   const iv=setInterval(()=>{
     try{
       // 模拟移动输入
       ctxObj.G.Input.move.x=0.6;ctxObj.G.Input.move.y=0.3;
-      // 直接调用内部 update 通过 rAF 已在跑；额外强制一些事件
       frames++;
       if(frames===30){G.Input.dashQueued=true;}
       if(frames===60){

@@ -18,7 +18,7 @@ H.refreshMon=function(){
   if(sheet){
     const c=cv.getContext('2d');
     c.clearRect(0,0,32,32);c.imageSmoothingEnabled=false;
-    c.drawImage(sheet,0,0,32,32);
+    G.gfx.fit(c,sheet,32,32);
   }
   H.refreshMoves();H.refreshItems();
 };

@@ -26,6 +26,9 @@ G.Player.reset=function(monId,shiny){
     evolutions:0,evoT:0
   };
   p.hp=p.hpMax;
+  // 出生点可能落在水/熔岩/障碍物内 → 环形搜索可站立点
+  const spn=G.World.findSpawn(0,0,p.r*0.72);
+  p.x=spn.x;p.y=spn.y;
   // 初始技能
   const start=sp.learn.find(l=>l.lv<=1)||sp.learn[0];
   if(start)Pl.addMove(p,start.m);
@@ -75,8 +78,7 @@ G.Player.update=function(dt){
   if(p.hurtFlash>0)p.hurtFlash-=dt*3;
   if(p.dashT>0){
     p.dashT-=dt;
-    p.x+=p.dashVX*dt;p.y+=p.dashVY*dt;
-    G.World.collide(p,0,0);
+    G.World.collide(p,p.dashVX*dt,p.dashVY*dt);
     // 冲刺留残影
     if(Math.random()<0.6)G.FX.trail(p.x,p.y-6,p.shiny?'#9ef':'#fff');
   }else{
@@ -86,6 +88,7 @@ G.Player.update=function(dt){
     G.World.collide(p,p.vx*dt,p.vy*dt);
     if(mv.x||mv.y)p.aim=Math.atan2(mv.y,mv.x);
   }
+  G.World.unstick(p);
 
   // 冲刺
   if(p.dashCd>0)p.dashCd-=dt;
@@ -326,7 +329,8 @@ G.Player.draw=function(ctx,cam){
   const squash=p.dashT>0?1.15:(moving?1+Math.sin(p.t*12)*0.04:1);
   const flip=(p.vx<-4)||(Math.cos(p.aim)<-0.2);
   const flash=p.inv>0&&(Date.now()/80|0)%2===0?0.55:(p.hurtFlash>0?Math.min(1,p.hurtFlash):0);
-  G.gfx.shadow(ctx,x,y+1,7,0.3);
+  const psheet=G.gfx.sheet(p.sprite,p.shiny);
+  G.gfx.shadow(ctx,x,y+1,Math.max(7,psheet?psheet.width*0.3:7),0.3);
   // 护盾
   if(p.shield){
     ctx.save();ctx.globalAlpha=0.35+0.1*Math.sin(Date.now()/80);

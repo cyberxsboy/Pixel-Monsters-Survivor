@@ -22,8 +22,9 @@ function spawnPos(){
   let x=pl.x+Math.cos(a)*r,y=pl.y+Math.sin(a)*r;
   // 避开水/熔岩中心（允许边缘）
   let guard=0;
-  while(G.World.tileAt(x,y)===2&&guard++<6){x+=Math.cos(a)*20;y+=Math.sin(a)*20;}
-  return {x:x,y:y};
+  while((G.World.tileAt(x,y)===2||G.World.tileAt(x,y)===4)&&guard++<6){x+=Math.cos(a)*20;y+=Math.sin(a)*20;}
+  // 最终确保不在树/石/宝箱等固体里
+  return G.World.findSpawn(x,y,6);
 }
 
 S.pickPool=function(wave){

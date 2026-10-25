@@ -37,8 +37,7 @@ B.update=function(dt){
   // 每 120 秒一头目
   const idx=Math.floor(timeSec/120);
   if(idx>=1&&!gs.run.bossKills[idx-1]){
-    gs.run.bossKills[idx-1]=true;
-    spawnBoss(idx-1,false);
+    if(spawnBoss(idx-1,false))gs.run.bossKills[idx-1]=true;
   }
 };
 
@@ -49,7 +48,8 @@ function spawnBoss(i,isLegend){
   const timeSec=gs.run.time/1000;
   const scale=1+timeSec/300*0.8;
   const a=Math.random()*U.TAU,r=150;
-  const x=pl.x+Math.cos(a)*r,y=pl.y+Math.sin(a)*r;
+  let x=pl.x+Math.cos(a)*r,y=pl.y+Math.sin(a)*r;
+  const fs=G.World.findSpawn(x,y,def.r*0.72+2);x=fs.x;y=fs.y;
   const e=G.Enemies.spawn(def.id,x,y,{boss:true,hp:def.hp*scale,r:def.r,spd:1,xp:Math.round(60*scale)});
   if(!e)return;
   // 覆盖为 boss 定义
@@ -68,6 +68,7 @@ function spawnBoss(i,isLegend){
   G.Audio.sfx('boss');
   G.Audio.playSong(isLegend?'legend':'boss');
   e.teleT=0;e.radialN=12;
+  return e;
 };
 
 B.enterLegendary=function(rift){
@@ -211,7 +212,7 @@ G.Enemies.kill=function(e,by){
   if(wasBoss&&B.active===e){
     if(e.id&&String(e.id).indexOf('l_')===0){
       G.UI.banner('传说精灵讨伐成功！');
-      gs.winLegend();
+      gs().winLegend();
     }
     endFight(true);
   }

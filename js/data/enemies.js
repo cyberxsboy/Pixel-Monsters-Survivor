@@ -44,6 +44,17 @@ def('mage2',{name:'深渊法师',sprite:'e_mage',hp:90,spd:50,dmg:22,xp:7,r:10,a
 def('healer',{name:'治愈精灵',sprite:'e_ghost',hp:40,spd:50,dmg:6,xp:4,r:9,ai:'healer',tier:2,tint:'#7ef57e',heal:{cd:2500,amt:8,r:90}});
 def('healer2',{name:'大治愈者',sprite:'e_ghost',hp:100,spd:54,dmg:10,xp:8,r:10,ai:'healer',tier:3,tint:'#7ad8ff',heal:{cd:2200,amt:18,r:110}});
 
+// 头目/传说（仅 boss.js 使用；不在 TIERS 刷怪池中，hp/xp 由 spawn 参数换算）
+const BD=(id,name,sprite)=>def(id,{name:name,sprite:sprite,hp:1,spd:60,dmg:10,xp:60,r:16,ai:'chaser',tier:3});
+BD('b_stone','巨岩魔像','e_golem');
+BD('b_flame','炎狱魔王','e_imp');
+BD('b_ghost','幽冥鬼帝','e_ghost');
+BD('b_eye','深渊之眼','e_eye');
+BD('l_sun','烈阳神鸟','spark2');
+BD('l_tide','沧海神龟','ripple3');
+BD('l_forest','森罗神鹿','sprout3');
+BD('l_dragon','苍穹古龙','dragon2');
+
 G.ENEMIES=E;
 G.enemy=id=>E[id];
 })();

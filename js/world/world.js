@@ -118,6 +118,34 @@ W.hazardAt=function(x,y){
   if(t===4)return 1;      // 熔岩
   return 0;
 };
+// 脱困安全网：若实体卡在固体内部，8 方向螺旋搜索最近可站立点
+W.unstick=function(ent){
+  const r=ent.r*0.72;
+  if(!W.hitSolid(ent.x,ent.y,r))return false;
+  const DIRS8=[[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]];
+  for(let step=1;step<=64;step++){
+    const d=step*4;
+    for(const[dx,dy]of DIRS8){
+      const x=ent.x+dx*d,y=ent.y+dy*d;
+      if(!W.hitSolid(x,y,r)){ent.x=x;ent.y=y;return true;}
+    }
+  }
+  return false;
+};
+// 出生点搜索：从 (x,y) 环形外扩找可站立点（空闲点一次命中即返回）
+W.findSpawn=function(x,y,r){
+  r=r||5;
+  if(!W.hitSolid(x,y,r))return {x:x,y:y};
+  const DIRS8=[[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]];
+  for(let step=1;step<=512;step++){
+    const d=step*4;
+    for(const[dx,dy]of DIRS8){
+      const nx=x+dx*d,ny=y+dy*d;
+      if(!W.hitSolid(nx,ny,r))return {x:nx,y:ny};
+    }
+  }
+  return {x:x,y:y};
+};
 
 // ---------- 地块绘制 ----------
 // lx/ly: 分块内局部格坐标(0~15)  wx/wy: 世界绝对格坐标(用于噪声/动画)
@@ -157,8 +185,8 @@ function drawTile(ctx,lx,ly,wx,wy,t,s){
   }else if(t===4){
     ctx.fillStyle='#c83a10';ctx.fillRect(px,py,TS,TS);
     ctx.fillStyle='#ff7a2d';
-    const f=((Date.now()/240+wx*3+wy*5)|0)%TS;
-    ctx.fillRect(px+2,py+((f+3)%TS),8,2);ctx.fillRect(px+((f+6)%TS),py+9,6,2);
+    const f=(((Date.now()/240+wx*3+wy*5)|0)%TS+TS)%TS;
+    ctx.fillRect(px+2,py+((f+3)%(TS-2)),8,2);ctx.fillRect(px+((f+6)%(TS-6)),py+9,6,2);
     ctx.fillStyle='#ffd93d';ctx.fillRect(px+((h(14,0)*12)|0),py+((h(15,0)*12)|0),3,2);
   }else if(t===6){
     ctx.fillStyle='#8a8aa0';ctx.fillRect(px,py,TS,TS);

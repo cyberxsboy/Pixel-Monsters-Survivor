@@ -53,7 +53,7 @@ function drawTitleMon(){
     const sp=G.mon(G.Save.data.mon)||G.mon('flame1');
     const sheet=G.gfx.sheet(sp.sprite,G.Save.data.shiny);
     c.clearRect(0,0,64,64);
-    if(sheet)c.drawImage(sheet,0,Math.sin(t)*2,64,64);
+    if(sheet){c.save();c.translate(0,Math.sin(t)*2);G.gfx.fit(c,sheet,64,64);c.restore();}
     if(!U.el('screen-title').classList.contains('hidden'))requestAnimationFrame(anim);
   })();
 }
@@ -149,7 +149,7 @@ Game.endRun=function(win){
   U.el('result-title').textContent=win?'通关成功！':'冒险结束';
   const cv=U.el('result-face');
   const sheet=G.gfx.sheet(p.sprite,p.shiny);
-  if(sheet){const c=cv.getContext('2d');c.clearRect(0,0,64,64);c.imageSmoothingEnabled=false;c.drawImage(sheet,0,0,64,64);}
+  if(sheet){const c=cv.getContext('2d');c.clearRect(0,0,64,64);c.imageSmoothingEnabled=false;G.gfx.fit(c,sheet,64,64);}
   U.el('result-stats').innerHTML=
     cell(U.fmtTime(time),'生存时间')+cell(p.lv,'最终等级')+
     cell(gs.run.kills,'击杀')+cell(gs.run.bossKillsDone,'头目')+
@@ -208,7 +208,7 @@ function update(dt){
   // 天气
   gs.weatherT-=dt;
   if(gs.weatherT<=0){
-    gs.weather=G.rng.pick(G.Types.WEATHER);
+    gs.weather=gs.rng.pick(G.Types.WEATHER);
     gs.weatherT=45+Math.random()*50;
     G.UI.banner(gs.weather.icon+' '+gs.weather.n);
   }
